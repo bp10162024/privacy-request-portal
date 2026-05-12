@@ -1,0 +1,91 @@
+<%
+const urgencyBadge = (u) => {
+  if (u === 'overdue') return 'badge-red';
+  if (u === 'critical') return 'badge-red';
+  if (u === 'warning') return 'badge-yellow';
+  return 'badge-green';
+};
+const statusBadge = (s) => {
+  if (s === 'completed') return 'badge-green';
+  if (s === 'in_progress') return 'badge-blue';
+  if (s === 'acknowledged') return 'badge-yellow';
+  return 'badge-gray';
+};
+%>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Open Requests</h1>
+  <a href="/requests/new" class="bg-slate-900 text-white px-4 py-2 rounded text-sm">+ New Request</a>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100 text-slate-700">
+      <tr>
+        <th class="px-4 py-2 text-left">Received</th>
+        <th class="px-4 py-2 text-left">Requester</th>
+        <th class="px-4 py-2 text-left">Type</th>
+        <th class="px-4 py-2 text-left">Status</th>
+        <th class="px-4 py-2 text-left">Deadline</th>
+        <th class="px-4 py-2 text-left">Progress</th>
+        <th class="px-4 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!open || open.length === 0) { %>
+        <tr><td class="px-4 py-6 text-slate-500 text-center" colspan="7">No open requests.</td></tr>
+      <% } %>
+      <% (open || []).forEach(r => { %>
+        <tr class="border-t border-slate-100 hover:bg-slate-50">
+          <td class="px-4 py-2 text-slate-500"><%= new Date(r.date_received).toLocaleDateString() %></td>
+          <td class="px-4 py-2">
+            <div class="font-medium"><%= r.requester_name || '—' %></div>
+            <div class="text-slate-500 text-xs"><%= r.requester_email %></div>
+          </td>
+          <td class="px-4 py-2"><span class="badge badge-blue"><%= r.request_type.replace('_',' ') %></span></td>
+          <td class="px-4 py-2"><span class="badge <%= statusBadge(r.status) %>"><%= r.status.replace('_',' ') %></span></td>
+          <td class="px-4 py-2">
+            <span class="badge <%= urgencyBadge(r.urgency) %>">
+              <%= r.urgency === 'overdue' ? 'OVERDUE' : Math.floor(r.days_remaining) + ' days' %>
+            </span>
+            <div class="text-slate-500 text-xs"><%= new Date(r.deadline_at).toLocaleDateString() %></div>
+          </td>
+          <td class="px-4 py-2 text-slate-600"><%= r.completed_actions %>/<%= r.total_actions %></td>
+          <td class="px-4 py-2 text-right">
+            <a href="/requests/<%= r.id %>" class="text-blue-600 hover:underline">Open</a>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-8">
+  <h2 class="text-xl font-bold mb-3">Recently Completed</h2>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-100 text-slate-700">
+        <tr>
+          <th class="px-4 py-2 text-left">Completed</th>
+          <th class="px-4 py-2 text-left">Requester</th>
+          <th class="px-4 py-2 text-left">Type</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!completed || completed.length === 0) { %>
+          <tr><td class="px-4 py-6 text-slate-500 text-center" colspan="4">No completed requests yet.</td></tr>
+        <% } %>
+        <% (completed || []).forEach(r => { %>
+          <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="px-4 py-2 text-slate-500"><%= new Date(r.completed_at).toLocaleDateString() %></td>
+            <td class="px-4 py-2"><%= r.requester_email %></td>
+            <td class="px-4 py-2"><span class="badge badge-blue"><%= r.request_type.replace('_',' ') %></span></td>
+            <td class="px-4 py-2 text-right">
+              <a href="/requests/<%= r.id %>" class="text-blue-600 hover:underline">View</a>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>

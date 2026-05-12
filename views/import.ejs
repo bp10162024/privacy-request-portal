@@ -1,0 +1,25 @@
+<h1 class="text-2xl font-bold mb-6">Bulk Import Past Requests</h1>
+
+<div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+  <p class="text-sm text-slate-600 mb-4">
+    Upload a CSV with these columns: <code>requester_email,requester_name,source,request_type,date_received,source_url,notes</code>.
+    Dates should be YYYY-MM-DD. <code>source</code> ∈ {intercom, do_not_sell_form, email, mail, phone, other}.
+    <code>request_type</code> ∈ {opt_out, delete, access, correct, limit}.
+  </p>
+  <form method="POST" action="/import" enctype="multipart/form-data">
+    <input type="file" name="csvfile" accept=".csv" required class="mb-3 block" />
+    <button type="submit" class="bg-slate-900 text-white px-4 py-2 rounded">Import</button>
+  </form>
+
+  <% if (result) { %>
+    <div class="mt-6 p-4 rounded <%= result.errors.length ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200' %>">
+      <p class="font-bold">Imported <%= result.imported %> row(s).</p>
+      <% if (result.errors.length) { %>
+        <p class="text-sm text-red-700 mt-2">Errors:</p>
+        <ul class="list-disc ml-5 text-xs text-red-700">
+          <% result.errors.forEach(e => { %><li><%= e %></li><% }); %>
+        </ul>
+      <% } %>
+    </div>
+  <% } %>
+</div>

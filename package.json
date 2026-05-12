@@ -1,0 +1,26 @@
+{
+  "name": "privacy-request-portal",
+  "version": "1.0.0",
+  "description": "CCPA / GDPR privacy request management portal for Buddy Punch",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "axios": "^1.7.7",
+    "csv-parse": "^5.5.6",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "google-auth-library": "^9.14.1",
+    "googleapis": "^144.0.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "stripe": "^17.2.0"
+  }
+}

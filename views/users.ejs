@@ -1,0 +1,44 @@
+<h1 class="text-2xl font-bold mb-6">Authorized Users</h1>
+
+<form method="POST" action="/users/add" class="bg-white rounded-lg shadow p-6 mb-6 max-w-2xl">
+  <h2 class="font-bold mb-3">Add User</h2>
+  <div class="grid grid-cols-3 gap-3">
+    <input type="email" name="email" placeholder="email@buddypunch.com" required class="col-span-2 border border-slate-300 rounded px-3 py-2" />
+    <select name="role" class="border border-slate-300 rounded px-3 py-2">
+      <option value="admin">Admin</option>
+      <option value="viewer">Viewer</option>
+    </select>
+  </div>
+  <button type="submit" class="mt-3 bg-slate-900 text-white px-4 py-2 rounded">Add</button>
+</form>
+
+<div class="bg-white rounded-lg shadow">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100 text-slate-700">
+      <tr>
+        <th class="px-4 py-2 text-left">Email</th>
+        <th class="px-4 py-2 text-left">Role</th>
+        <th class="px-4 py-2 text-left">Last login</th>
+        <th class="px-4 py-2 text-left">Added by</th>
+        <th class="px-4 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(u => { %>
+        <tr class="border-t">
+          <td class="px-4 py-2"><%= u.email %></td>
+          <td class="px-4 py-2"><%= u.role %></td>
+          <td class="px-4 py-2 text-slate-500"><%= u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '—' %></td>
+          <td class="px-4 py-2 text-slate-500"><%= u.added_by %></td>
+          <td class="px-4 py-2 text-right">
+            <% if (u.email !== currentUser.email) { %>
+              <form method="POST" action="/users/<%= u.id %>/remove" class="inline">
+                <button type="submit" class="text-red-600 hover:underline text-xs">Remove</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

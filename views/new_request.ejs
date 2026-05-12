@@ -1,0 +1,47 @@
+<h1 class="text-2xl font-bold mb-6">Log New Privacy Request</h1>
+
+<form method="POST" action="/requests/new" class="bg-white rounded-lg shadow p-6 max-w-2xl">
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 mb-1">Requester email *</label>
+    <input type="email" name="requester_email" required class="w-full border border-slate-300 rounded px-3 py-2" placeholder="jane@example.com" />
+  </div>
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 mb-1">Requester name (optional)</label>
+    <input type="text" name="requester_name" class="w-full border border-slate-300 rounded px-3 py-2" />
+  </div>
+  <div class="grid grid-cols-2 gap-4 mb-4">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Source *</label>
+      <select name="source" required class="w-full border border-slate-300 rounded px-3 py-2">
+        <option value="intercom">Intercom</option>
+        <option value="do_not_sell_form">Do Not Sell form (web)</option>
+        <option value="email">Email to support</option>
+        <option value="mail">Postal mail</option>
+        <option value="phone">Phone call</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Request type *</label>
+      <select name="request_type" required class="w-full border border-slate-300 rounded px-3 py-2">
+        <option value="opt_out">Opt out of sale/share (15 business days)</option>
+        <option value="delete">Delete all my data (45 calendar days)</option>
+        <option value="access">Access my data (45 calendar days)</option>
+        <option value="correct">Correct my data (45 calendar days)</option>
+        <option value="limit">Limit use of sensitive PII (15 business days)</option>
+      </select>
+    </div>
+  </div>
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 mb-1">Source URL (Intercom conversation link, etc.)</label>
+    <input type="url" name="source_url" class="w-full border border-slate-300 rounded px-3 py-2" placeholder="https://app.intercom.com/..." />
+  </div>
+  <div class="mb-4">
+    <label class="block text-sm font-medium text-slate-700 mb-1">Notes (optional)</label>
+    <textarea name="notes" rows="3" class="w-full border border-slate-300 rounded px-3 py-2"></textarea>
+  </div>
+  <div class="flex items-center gap-3">
+    <button type="submit" class="bg-slate-900 text-white px-4 py-2 rounded">Log Request</button>
+    <a href="/" class="text-slate-600 hover:underline text-sm">Cancel</a>
+  </div>
+</form>

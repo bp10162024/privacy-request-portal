@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Sign in — Privacy Request Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-lg shadow max-w-md w-full">
+    <h1 class="text-2xl font-bold mb-2">Buddy Punch Privacy Request Portal</h1>
+    <p class="text-slate-600 mb-6 text-sm">Sign in with your @buddypunch.com Google account. Access is restricted to authorized users only.</p>
+    <% if (error) { %>
+      <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm"><%= error %></div>
+    <% } %>
+    <a href="/auth/google" class="inline-flex items-center justify-center w-full bg-slate-900 text-white px-4 py-3 rounded hover:bg-slate-800">
+      Sign in with Google
+    </a>
+  </div>
+</body>
+</html>
