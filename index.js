@@ -17,8 +17,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ dest: '/tmp/' });
 
-// Railway terminates SSL at the edge — trust the X-Forwarded-* headers so
-// secure session cookies work correctly.
 app.set('trust proxy', 1);
 
 app.set('view engine', 'ejs');
@@ -33,7 +31,6 @@ app.use(session({
   cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 8, sameSite: 'lax' },
 }));
 
-// Render layout helper
 function render(res, view, locals = {}) {
   res.render(view, locals, (err, body) => {
     if (err) {
@@ -44,7 +41,6 @@ function render(res, view, locals = {}) {
   });
 }
 
-// Inject user + flash into res.locals
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.flash = req.session.flash || null;
@@ -52,7 +48,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check
 app.get('/healthz', (_req, res) => res.send('OK'));
 app.get('/', requireAuth, async (req, res) => {
   const { data: open } = await supabase.from('privacy_requests_open').select('*').order('deadline_at', { ascending: true });
@@ -65,7 +60,6 @@ app.get('/', requireAuth, async (req, res) => {
   render(res, 'dashboard', { open, completed, title: 'Dashboard' });
 });
 
-// --- Auth ---
 app.get('/login', (req, res) => {
   res.render('login', { error: req.query.error });
 });
@@ -93,7 +87,6 @@ app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
-// --- Google OAuth for GA4 / Google Ads ---
 app.get('/oauth/google/authorize', requireAdmin, (_req, res) => {
   res.redirect(googleInt.getAuthUrl());
 });
@@ -108,17 +101,15 @@ app.get('/oauth/google/callback', requireAdmin, async (req, res) => {
   }
 });
 
-// --- New request ---
 app.get('/requests/new', requireAuth, (_req, res) => {
   render(res, 'new_request', { title: 'New Request' });
 });
 app.post('/requests/new', requireAuth, async (req, res) => {
   const { requester_email, requester_name, source, request_type, source_url, notes } = req.body;
   const dateReceived = new Date();
-  // deadline: 15 business days for opt_out/limit, 45 calendar days for delete/access/correct
   const deadline = new Date(dateReceived);
   if (request_type === 'opt_out' || request_type === 'limit') {
-    deadline.setDate(deadline.getDate() + 21); // 15 business days ≈ 21 calendar days
+    deadline.setDate(deadline.getDate() + 21);
   } else {
     deadline.setDate(deadline.getDate() + 45);
   }
@@ -150,7 +141,6 @@ app.post('/requests/new', requireAuth, async (req, res) => {
   res.redirect(`/requests/${data.id}`);
 });
 
-// --- Request detail ---
 app.get('/requests/:id', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   if (!r) return res.status(404).send('Not found');
@@ -163,7 +153,8 @@ app.get('/requests/:id', requireAuth, async (req, res) => {
       label: d.label,
       automated: d.automated,
       docs: d.docs,
-      status: a.status || 'pending',
+      naReason: d.naReason,
+      status: a.status || (d.naReason ? 'not_applicable' : 'pending'),
       executed_at: a.executed_at,
       executed_by: a.executed_by,
       external_reference: a.external_reference,
@@ -181,7 +172,6 @@ app.get('/requests/:id', requireAuth, async (req, res) => {
   render(res, 'request_detail', { req: r, actions, auditLog: auditLog || [], allDone, title: r.requester_email });
 });
 
-// Run one destination
 app.post('/requests/:id/run/:destination', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   if (!r) return res.status(404).send('Not found');
@@ -197,7 +187,6 @@ app.post('/requests/:id/run/:destination', requireAuth, async (req, res) => {
   res.redirect(`/requests/${r.id}`);
 });
 
-// Run all automated
 app.post('/requests/:id/run-all', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   if (!r) return res.status(404).send('Not found');
@@ -210,14 +199,12 @@ app.post('/requests/:id/run-all', requireAuth, async (req, res) => {
   res.redirect(`/requests/${r.id}`);
 });
 
-// Manual complete
 app.post('/requests/:id/manual-complete/:destination', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   await runner.markManualComplete(r, req.params.destination, req.session.user.email, req.body.notes);
   res.redirect(`/requests/${r.id}`);
 });
 
-// Complete request + send confirmation
 app.post('/requests/:id/complete', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   await supabase.from('privacy_requests').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', r.id);
@@ -229,7 +216,6 @@ app.post('/requests/:id/complete', requireAuth, async (req, res) => {
   res.redirect(`/requests/${r.id}`);
 });
 
-// --- Users ---
 app.get('/users', requireAdmin, async (req, res) => {
   const { data: users } = await supabase.from('privacy_request_users').select('*').order('created_at');
   render(res, 'users', { users: users || [], currentUser: req.session.user, title: 'Users' });
@@ -248,7 +234,6 @@ app.post('/users/:id/remove', requireAdmin, async (req, res) => {
   res.redirect('/users');
 });
 
-// --- Bulk import ---
 app.get('/import', requireAdmin, (_req, res) => {
   render(res, 'import', { result: null, title: 'Bulk Import' });
 });
@@ -295,7 +280,6 @@ app.post('/import', requireAdmin, upload.single('csvfile'), async (req, res) => 
   render(res, 'import', { result: { imported, errors }, title: 'Bulk Import' });
 });
 
-// --- Quarterly summary endpoint (cron-triggered or manual) ---
 app.get('/admin/quarterly-summary', requireAdmin, async (_req, res) => {
   const since = new Date();
   since.setMonth(since.getMonth() - 3);
@@ -318,7 +302,6 @@ app.get('/admin/quarterly-summary', requireAdmin, async (_req, res) => {
   res.json({ since: since.toISOString(), total, by_type: byType, average_completion_days: avgDays });
 });
 
-// --- Cron: deadline reminders, daily at 09:00 CT ---
 cron.schedule('0 9 * * *', async () => {
   console.log('[cron] running deadline check');
   const { data } = await supabase
@@ -333,7 +316,6 @@ cron.schedule('0 9 * * *', async () => {
   }
 }, { timezone: 'America/Chicago' });
 
-// --- Cron: quarterly summary, first Monday of each quarter at 09:00 CT ---
 cron.schedule('0 9 1-7 1,4,7,10 1', async () => {
   console.log('[cron] running quarterly summary');
   const since = new Date();
