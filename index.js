@@ -17,6 +17,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ dest: '/tmp/' });
 
+// Railway terminates SSL at the edge — trust the X-Forwarded-* headers so
+// secure session cookies work correctly.
+app.set('trust proxy', 1);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
@@ -26,7 +30,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 8 },
+  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 8, sameSite: 'lax' },
 }));
 
 // Render layout helper
@@ -73,9 +77,15 @@ app.get('/auth/callback', async (req, res) => {
     const result = await handleCallback(req.query.code);
     if (!result.ok) return res.redirect('/login?error=' + encodeURIComponent(result.error));
     req.session.user = result.user;
-    res.redirect('/');
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error', err);
+        return res.redirect('/login?error=' + encodeURIComponent('Session error: ' + err.message));
+      }
+      res.redirect('/');
+    });
   } catch (err) {
-    console.error(err);
+    console.error('Auth callback error', err);
     res.redirect('/login?error=' + encodeURIComponent(err.message));
   }
 });
