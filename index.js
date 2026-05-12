@@ -135,9 +135,16 @@ app.post('/requests/new', requireAuth, async (req, res) => {
   }
   await runner.ensureActionsForRequest(data);
   await audit(data.id, 'request.created', req.session.user.email, { source, request_type });
-  await postMessage(
-    `:lock: New privacy request received\n*Type:* ${request_type}  *From:* ${requester_email}\n*Deadline:* ${deadline.toLocaleDateString()}\n${process.env.BASE_URL}/requests/${data.id}`,
-  );
+  await postMessage([
+    `:lock: *New privacy request received*`,
+    `*Requester:* ${requester_email}${requester_name ? ` (${requester_name})` : ''}`,
+    `*Type:* ${request_type.replace('_', ' ')}`,
+    `*Source:* ${source}`,
+    `*Deadline:* ${deadline.toLocaleDateString()} (${request_type === 'opt_out' || request_type === 'limit' ? '15 business days' : '45 calendar days'})`,
+    `*Logged by:* ${req.session.user.email}`,
+    notes ? `*Notes:* ${notes}` : null,
+    `:link: ${process.env.BASE_URL}/requests/${data.id}`,
+  ].filter(Boolean).join('\n'));
   res.redirect(`/requests/${data.id}`);
 });
 
@@ -205,14 +212,31 @@ app.post('/requests/:id/manual-complete/:destination', requireAuth, async (req, 
   res.redirect(`/requests/${r.id}`);
 });
 
+// Mark request complete manually (force-complete before all destinations are terminal,
+// e.g. abandoned request, requester withdrew, etc.). Auto-complete handles the
+// normal happy path. Either way the Slack channel gets a rich notification.
 app.post('/requests/:id/complete', requireAuth, async (req, res) => {
   const { data: r } = await supabase.from('privacy_requests').select('*').eq('id', req.params.id).single();
   await supabase.from('privacy_requests').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', r.id);
-  await audit(r.id, 'request.completed', req.session.user.email);
-  await postMessage(
-    `:white_check_mark: Privacy request completed\n*From:* ${r.requester_email}  *Type:* ${r.request_type}\n${process.env.BASE_URL}/requests/${r.id}`,
-  );
-  req.session.flash = { type: 'ok', message: 'Request marked complete. Send the confirmation email to the requester manually for now (see runbook).' };
+  await audit(r.id, 'request.manual_completed', req.session.user.email);
+
+  const { data: actions } = await supabase.from('privacy_request_actions').select('*').eq('request_id', r.id);
+  const summary = (actions || []).map(a => `• *${a.destination}*: ${a.status}${a.error_message ? ` _(${a.error_message.slice(0, 80)})_` : ''}`).join('\n');
+
+  await postMessage([
+    `:white_check_mark: *Privacy request marked complete*`,
+    `*Requester:* ${r.requester_email}`,
+    `*Type:* ${r.request_type.replace('_', ' ')}`,
+    `*Marked complete by:* ${req.session.user.email}`,
+    ``,
+    `*Destination outcomes:*`,
+    summary,
+    ``,
+    `:envelope: *Reminder:* send the confirmation reply to the requester via Intercom or email. See the CCPA Request Runbook in \`~/Desktop/Claude Docs/\` for the macro.`,
+    `:link: ${process.env.BASE_URL}/requests/${r.id}`,
+  ].join('\n'));
+
+  req.session.flash = { type: 'ok', message: 'Request marked complete and posted to #privacy-requests.' };
   res.redirect(`/requests/${r.id}`);
 });
 
