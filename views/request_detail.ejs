@@ -67,25 +67,39 @@ const statusBadge = (s) => {
     </thead>
     <tbody>
       <% actions.forEach(a => { %>
-        <tr class="border-t">
+        <%
+          const naReason = a.naReason || (a.response_data && a.response_data.not_applicable_reason) || null;
+          const isNotApplicable = a.status === 'not_applicable' || !!naReason;
+        %>
+        <tr class="border-t <%= isNotApplicable ? 'bg-slate-50/40' : '' %>">
           <td class="px-6 py-3">
-            <div class="font-medium"><%= a.label %></div>
-            <% if (a.docs) { %>
+            <div class="font-medium <%= isNotApplicable ? 'text-slate-500' : '' %>"><%= a.label %></div>
+            <% if (a.docs && !isNotApplicable) { %>
               <a href="<%= a.docs %>" target="_blank" class="text-blue-600 hover:underline text-xs">docs</a>
             <% } %>
           </td>
           <td class="px-6 py-3">
-            <span class="badge <%= statusBadge(a.status) %>"><%= a.status %></span>
-            <% if (!a.automated) { %>
-              <div class="text-xs text-slate-500 mt-1">manual</div>
+            <% if (isNotApplicable) { %>
+              <span class="badge badge-gray">not applicable</span>
+            <% } else { %>
+              <span class="badge <%= statusBadge(a.status) %>"><%= a.status %></span>
+              <% if (!a.automated) { %>
+                <div class="text-xs text-slate-500 mt-1">manual</div>
+              <% } %>
             <% } %>
           </td>
           <td class="px-6 py-3 text-slate-500 text-xs">
-            <%= a.executed_at ? new Date(a.executed_at).toLocaleString() : '—' %>
-            <% if (a.executed_by) { %><br><%= a.executed_by %><% } %>
+            <% if (!isNotApplicable) { %>
+              <%= a.executed_at ? new Date(a.executed_at).toLocaleString() : '—' %>
+              <% if (a.executed_by) { %><br><%= a.executed_by %><% } %>
+            <% } else { %>
+              —
+            <% } %>
           </td>
           <td class="px-6 py-3 text-xs text-slate-600 max-w-md">
-            <% if (a.error_message) { %>
+            <% if (isNotApplicable && naReason) { %>
+              <span class="text-slate-500 italic"><%= naReason %></span>
+            <% } else if (a.error_message) { %>
               <span class="text-red-600"><%= a.error_message %></span>
             <% } else if (a.response_data && a.response_data.notes) { %>
               <%= a.response_data.notes %>
@@ -94,21 +108,21 @@ const statusBadge = (s) => {
             <% } %>
           </td>
           <td class="px-6 py-3 text-right whitespace-nowrap">
-            <% if (a.automated && a.status !== 'completed') { %>
+            <% if (isNotApplicable) { %>
+              <span class="text-slate-400 text-xs">—</span>
+            <% } else if (a.automated && a.status !== 'completed') { %>
               <form method="POST" action="/requests/<%= req.id %>/run/<%= a.destination %>" class="inline">
                 <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
                   Run
                 </button>
               </form>
-            <% } %>
-            <% if (!a.automated && a.status !== 'completed') { %>
+            <% } else if (!a.automated && a.status !== 'completed') { %>
               <form method="POST" action="/requests/<%= req.id %>/manual-complete/<%= a.destination %>" class="inline">
                 <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
                   Mark done
                 </button>
               </form>
-            <% } %>
-            <% if (a.status === 'completed') { %>
+            <% } else if (a.status === 'completed') { %>
               <span class="text-green-600 text-xs">✓ Done</span>
             <% } %>
           </td>
@@ -120,7 +134,7 @@ const statusBadge = (s) => {
 
 <% if (allDone && req.status !== 'completed') { %>
   <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-    <h3 class="font-bold mb-2">All destinations complete</h3>
+    <h3 class="font-bold mb-2">All destinations resolved</h3>
     <p class="text-sm text-slate-700 mb-4">Ready to mark this request complete and send the confirmation email to <strong><%= req.requester_email %></strong>.</p>
     <form method="POST" action="/requests/<%= req.id %>/complete" class="inline">
       <button type="submit" class="bg-green-700 text-white px-4 py-2 rounded">Mark Complete + Send Confirmation</button>
